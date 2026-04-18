@@ -1,0 +1,42 @@
+name: Build Phantom Stage AU Plugin (macOS)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.27'
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Package AU component
+        run: |
+          mkdir -p artifacts
+          find build -name "*.component" -exec cp -r {} artifacts/ \;
+          find build -name "*.vst3" -exec cp -r {} artifacts/ \;
+          cd artifacts && zip -r ../PhantomStage-Mac.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomStage-Mac
+          path: PhantomStage-Mac.zip
+          retention-days: 30
